@@ -1,0 +1,324 @@
+﻿
+@section styles
+{
+    <link href="~/Scripts/bootstrap-table-1.11.1/bootstrap-table.css" rel="stylesheet" />
+    <style>
+        #toolbar > p {
+            display: inline
+        }
+    </style>
+}
+
+<div id="toolbar">
+    <p><a href="#" class="btn btn-default" onclick="create()">新增配置 &raquo;</a></p>
+    &nbsp;&nbsp;&nbsp;
+    <p><a href="#" class="btn btn-default" onclick="edit()">修  改</a></p>
+    <p><a href="#" class="btn btn-default" onclick="connect('selected')">连  接</a></p>
+    <p><a href="#" class="btn btn-danger" onclick="del()">删  除</a></p>
+</div>
+<div style="margin-top:15px">
+    <table id="configTable"></table>
+</div>
+
+<div class="modal fade" tabindex="-1" role="dialog" id="configModal">
+    <div class="modal-dialog" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
+                <h4 class="modal-title">配置</h4>
+            </div>
+            <form id="edit-form">
+                <input type="hidden" id="MongoId" Name="MongoId"/>
+                <div class="modal-body">
+                    <div class="form-group">
+                        <label for="IP">名称:</label>
+                        <input type="text" class="form-control" id="Name" name="Name" placeholder="自定义名称">
+                    </div>
+                    <div class="form-group">
+                        <label for="IP">IP:</label>
+                        <input type="text" class="form-control" id="IP" name="IP" placeholder="IP">
+                    </div>
+                    <div class="form-group">
+                        <label for="Port">端口</label>
+                        <input type="text" value="27017" class="form-control" id="Port" name="Port" placeholder="端口">
+                    </div>
+                    <div class="form-group">
+                        <label for="Database">数据库(区分大小写)</label>
+                        <input type="text" class="form-control" id="Database" name="Database" placeholder="数据库">
+                    </div>
+                    <div class="form-group">
+                        <label for="Table">表(区分大小写)</label>
+                        <input type="text" class="form-control" id="Table" name="Table" placeholder="表">
+                    </div>
+                </div>
+            </form>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-danger" data-dismiss="modal">放弃了</button>
+                <button type="button" class="btn btn-primary" data-dismiss="modal" onclick="save()">保存</button>
+                <button type="button" class="btn btn-primary" data-dismiss="modal" onclick="connect('temp')">连接</button>
+                <button type="button" class="btn btn-primary" data-dismiss="modal" onclick="saveAndConnect()">保存并连接</button>
+            </div>
+        </div><!-- /.modal-content -->
+    </div><!-- /.modal-dialog -->
+</div><!-- /.modal -->
+
+@section scripts
+{
+
+    <script src="~/Scripts/bootstrap-table-1.11.1/bootstrap-table.js"></script>
+    <script src="~/Scripts/bootstrap-table-1.11.1/bootstrap-table-locale-all.js"></script>
+    <script type="text/javascript">
+        $(function() {
+            $('#configTable').bootstrapTable({
+                height: $(window).height() - 200,
+                method: 'post',
+                url: '/Home/GetConfigList',
+                data: [],
+                toolbar: '#toolbar',
+                align: 'center',
+                dataField: 'rows',
+                pagination: true,
+                pageNumber: 1,
+                pageSize: 10,
+                pageList: [10, 25, 50, 100],
+                queryParamsType: 'limit',
+                queryParams: queryParams,
+                sidePagination: 'server',
+                sortName: 'CreateTime',
+                sortOrder: 'desc',
+                search: true,
+                searchPlaceholder: '名称、IP、数据库、表',
+                showRefresh: true,
+                clickToSelect: true,
+                locale: 'zh-CN',
+                columns: [
+                    {
+                        radio: true
+                    },
+                    {
+                        field: 'Name',
+                        title: '名称',
+                        sortable: true
+                    },
+                    {
+                        title: 'IP',
+                        field: 'IP',
+                        sortable: true,
+                        formatter: function(value, row) {
+                            return row.IP + ':' + row.Port;
+                        }
+                    },
+                    {
+                        field: 'Database',
+                        title: '数据库名',
+                        sortable: true
+                    },
+                    {
+                        field: 'Table',
+                        title: '表名',
+                        sortable: true
+                    }
+                ]
+            });
+        });
+
+        function queryParams(params) {
+            return {
+                Page: params.offset / params.limit + 1,
+                Rows: params.limit,
+                Sort: params.sort,
+                Order: params.order,
+                FindText: params.search,
+                ip: $('#IP').val(),
+                port: $('#Port').val(),
+                database: $('#Database').val(),
+                table: $('#Table').val()
+            };
+        }
+
+        function refreshTable() {
+            $('#configTable').bootstrapTable('refresh');
+        }
+
+        function get_selected_id() {
+            var rows = $('#configTable').bootstrapTable('getSelections');
+            var id;
+            $.each(rows,
+                function(index, item) {
+                    id = item.MongoId;
+                });
+
+            return id;
+        }
+
+        function create() {
+            $('#MongoId').val('');
+            $('#Name').val('');;
+            $('#IP').val('');;
+            $('#Port').val('27017');;
+            $('#Database').val('');
+            $('#Table').val('');
+
+            $('#configModal').modal({
+                show: true
+            });
+        }
+
+        function edit() {
+            var id = get_selected_id();
+            if (id) {
+                $.post('/Home/GetConfig', { id: id }).success(function(ret) {
+                    if (ret) {
+                        $('#MongoId').val(ret.MongoId);
+                        $('#Name').val(ret.Name);
+                        $('#IP').val(ret.IP);
+                        $('#Port').val(ret.Port);
+                        $('#Database').val(ret.Database);
+                        $('#Table').val(ret.Table);
+
+                        $('#configModal').modal({
+                            show: true
+                        });
+                    } else {
+                        swal({ title: '找不到数据。', timer: 2000, type: 'error', showConfirmButton: true });
+                    }
+                });
+            } else {
+                swal("请选择一条操作数据", "", "info");
+            }
+        }
+
+        function submitConnect(winName, config) {
+            var url = '/Home/Peeper';
+            //var form = document.createElement("form");
+            //form.setAttribute("method", "post");
+            //form.setAttribute("action", url);
+            //form.setAttribute("target", name);
+
+            var params = '?';
+            for (var i in config) {
+                if (config.hasOwnProperty(i)) {
+                    //var input = document.createElement('input');
+                    //input.type = 'hidden';
+                    //input.name = i;
+                    //input.value = config[i];
+                    //form.appendChild(input);
+                    params += i + '=' + config[i] + '&';
+                }
+            }
+
+            //document.body.appendChild(form);
+
+            window.open(url + params, winName);
+
+            //if (map) {
+            //    form.submit();
+            //    document.body.removeChild(form);
+            //} else {
+            //    swal("无法弹出连接框。", "", "error");
+            //}
+        }
+
+        function connect(type, id) {
+            var config = new Object();
+            if (type === 'temp') {
+                config.name = $('#Name').val();
+                config.ip = $('#IP').val();
+                config.port = $('#Port').val();
+                config.database = $('#Database').val();
+                config.table = $('#Table').val();
+                submitConnect('临时连接', config);
+            } else if (type === 'selected') {
+                var _id = get_selected_id();
+                if (_id) {
+                    $.post('/Home/GetConfig', { id: _id }).success(function (ret) {
+                        if (ret) {
+                            config.name = ret.Name;
+                            config.ip = ret.IP;
+                            config.port = ret.Port;
+                            config.database = ret.Database;
+                            config.table = ret.Table;
+
+                            submitConnect(config.name + '连接', config);
+                        } else {
+                            swal({ title: '找不到数据。', timer: 2000, type: 'error', showConfirmButton: true });
+                        }
+                    });
+                } else {
+                    swal("请选择一条操作数据", "", "info");
+                }
+            } else if (type === 'specified' && id) {
+                $.post('/Home/GetConfig', { id: id }).success(function (ret) {
+                    if (ret) {
+                        config.name = ret.Name;
+                        config.ip = ret.IP;
+                        config.port = ret.Port;
+                        config.database = ret.Database;
+                        config.table = ret.Table;
+
+                        submitConnect(config.name + '连接', config);
+                    } else {
+                        swal({ title: '找不到数据。', timer: 2000, type: 'error', showConfirmButton: true });
+                    }
+                });
+            } else {
+                swal("不能识别的操作。", "", "info");
+            }
+        }
+
+        function save() {
+            $.post('/Home/UpdateConfig', $('#edit-form').serialize()).success(function(ret) {
+                if (ret.result === true) {
+                    refreshTable();
+                    return ret.id;
+                } else {
+                    swal({ title: '生成失败', timer: 2000, type: 'error', showConfirmButton: true });
+                    return null;
+                }
+            });
+
+        }
+
+        function saveAndConnect() {
+            var id = save();
+            refreshTable();
+            if (id) {
+                connect('specified', id);
+            }
+        }
+
+        function del() {
+            var id = get_selected_id();
+            if (id) {
+                swal({
+                    title: "是否删除?",
+                    icon: "warning",
+                    buttons: true,
+                    dangerMode: true
+                }).then((willDelete) => {
+                    if (willDelete) {
+                        $.ajax({
+                            type: 'post',
+                            data: { id: id },
+                            url: '/Home/DeleteConfig',
+                            success: function(ret) {
+                                if (ret === true) {
+                                    refreshTable();
+                                } else if (ret && !ret.result) {
+                                    swal({ title: ret.message, timer: 2000, type: 'error', showConfirmButton: true });
+                                } else {
+                                    swal({ title: '生成失败', timer: 2000, type: 'error', showConfirmButton: true });
+                                }
+                            },
+                            error: function(err) {
+                                swal({ title: '生成失败', timer: 2000, type: 'error', showConfirmButton: true });
+                            }
+                        });
+                    }
+                });
+            } else {
+                swal("请选择一条操作数据", "", "info");
+            }
+        }
+    </script>
+}

@@ -1,0 +1,97 @@
+﻿@model MongoPeeper.Models.ConfigModel
+@section styles
+{
+    <link href="~/Scripts/bootstrap-table-1.11.1/bootstrap-table.css" rel="stylesheet" />
+}
+
+<div id="toolbar">
+    <span>连接名 - </span><span style="color:rosybrown">@Model.Name;&nbsp;</span>
+    <span>IP - </span><span style="color:rosybrown">@Model.IP:@Model.Port;&nbsp;</span>
+    <span>数据库 - </span><span style="color:rosybrown">@Model.Database;&nbsp;</span>
+    <span>表 - </span><span style="color:rosybrown">@Model.Table;&nbsp;</span>
+</div>
+
+<div style="margin-top:15px">
+    <table id="mongoTable"></table>
+</div>
+
+@section scripts
+{
+    <script src="~/Scripts/bootstrap-table-1.11.1/bootstrap-table.js"></script>
+    <script src="~/Scripts/bootstrap-table-1.11.1/bootstrap-table-locale-all.js"></script>
+    <script type="text/javascript">
+        $(function() {
+            $('#mongoTable').bootstrapTable({
+                height: $(window).height() - 200,
+                method: 'post',
+                url: '/Home/GetList',
+                data: [],
+                toolbar: '#toolbar',
+                align: 'center',
+                dataField: 'rows',
+                pagination: true,
+                pageNumber: 1,
+                pageSize: 10,
+                pageList: [10, 25, 50, 100],
+                queryParamsType: 'limit',
+                queryParams: queryParams,
+                sidePagination: 'server',
+                sortName: 'content_id',
+                sortOrder: 'desc',
+                //search: true,
+                //searchPlaceholder: 'xx',
+                showRefresh: true,
+                locale: 'zh-CN',
+                columns: [
+                    {
+                        title: '内容',
+                        field: 'Content',
+                        sortable: true,
+                        formatter: function (value, row) {
+                            value = value.replace(
+                                /("(\\u[a-zA-Z0-9]{4}|\\[^u]|[^\\"])*"(\s*:)?|\b(true|false|null)\b|-?\d+(?:\.\d*)?(?:[eE][+\-]?\d+)?)/g,
+                                function(match) {
+                                    var cls = 'number';
+                                    if (/^"/.test(match)) {
+                                        if (/:$/.test(match)) {
+                                            cls = 'key';
+                                        } else {
+                                            cls = 'string';
+                                        }
+                                    } else if (/true|false/.test(match)) {
+                                        cls = 'boolean';
+                                    } else if (/null/.test(match)) {
+                                        cls = 'null';
+                                    }
+                                    return (cls==='key' ? '<br>':'') + '<span class="' + cls + '">' + match + '</span>';
+                                });
+                            return value;
+                        }
+                    }
+                ]
+            });
+        });
+
+        function queryParams(params) {
+            return {
+                Page: params.offset / params.limit + 1,
+                Rows: params.limit,
+                Sort: params.sort,
+                Order: params.order,
+                FindText: params.search,
+                ip: '@Model.IP',
+                port: '@Model.Port',
+                database: '@Model.Database',
+                table: '@Model.Table'
+            };
+        }
+
+        function connect() {
+            $('#mongoTable').bootstrapTable('refresh');
+        }
+
+        function saveAndConnect() {
+            $('#mongoTable').bootstrapTable('refresh');
+        }
+    </script>
+}
