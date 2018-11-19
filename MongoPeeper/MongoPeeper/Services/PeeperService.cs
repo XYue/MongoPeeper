@@ -36,10 +36,10 @@ namespace MongoPeeper.Services
         {
         }
 
-        public async Task<object> GetList(string ip, string port, string database, string table, DatagridParams param)
+        public async Task<object> GetList(string ip, string port, string database, string table, DatagridParams param, string key = "")
         {
             var list = new List<PeeperModel>();            
-            var total = 0;
+            long total = 0;
 
             try
             {
@@ -47,21 +47,27 @@ namespace MongoPeeper.Services
                 var db = client.GetDatabase(database);
                 var collection = db.GetCollection<BsonDocument>(table);
 
-                total = await collection.AsQueryable().CountAsync();
+                //total = await collection.AsQueryable().CountAsync();
 
                 var pageIndex = param.Page >= 1 ? param.Page : 1;
                 pageIndex -= 1;
                 var pageRows = param.Rows > 0 ? param.Rows : 1;
 
-                var query = await collection.Find(Builders<BsonDocument>.Filter.Exists("_id"))
-                    .Sort(Builders<BsonDocument>.Sort.Descending("_id"))
+                var filter = Builders<BsonDocument>.Filter.Exists("_id");
+                if (!string.IsNullOrEmpty(param.FindText) && !string.IsNullOrWhiteSpace(key))
+                {
+                    var search = Builders<BsonDocument>.Filter.Regex(key, new BsonRegularExpression($".*{param.FindText}.*"));
+                    filter = Builders<BsonDocument>.Filter.And(filter, search);
+                }
+
+                var query = collection.Find(filter);
+                total = await query.CountAsync();
+
+                var result = await query.Sort(Builders<BsonDocument>.Sort.Descending("_id"))
                     .Skip(pageIndex * pageRows).Limit(pageRows).ToListAsync();
 
 
-                //var query = collection.AsQueryable();
-                //query = query.Skip( pageIndex * pageRows ).Take(pageRows);
-
-                foreach (var c in query)
+                foreach (var c in result)
                 {
                     list.Add(new PeeperModel()
                     {

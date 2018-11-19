@@ -17,12 +17,12 @@ namespace MongoPeeper.Controllers
             return View();
         }
 
-        public async Task<ActionResult> GetList(string ip, string port, string database, string table, DatagridParams param)
+        public async Task<ActionResult> GetList(string ip, string port, string database, string table, DatagridParams param, string key="")
         {
             object page = null;
             using (var service = new PeeperService())
             {
-                page = await service.GetList(ip, port, database, table, param);
+                page = await service.GetList(ip, port, database, table, param, key);
             }
             return Json(page);
         }

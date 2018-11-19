@@ -9,7 +9,7 @@ namespace MongoPeeper.Services
     public interface IPeeperService : IInjector
     {
 
-        Task<object> GetList(string ip, string port, string database, string table, DatagridParams param);
+        Task<object> GetList(string ip, string port, string database, string table, DatagridParams param, string key = "");
         //Task<NewsModel> Get(User ui, string id);
 
         Task<object> GetConfigList(DatagridParams model);
